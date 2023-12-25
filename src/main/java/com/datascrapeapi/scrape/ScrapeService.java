@@ -48,11 +48,7 @@ public class ScrapeService {
     private final HeadquarterService headquarterService;
     private final StockDataService stockDataService;
 
-    public ScrapeService(
-            CompanyService companyService,
-            HeadquarterService headquarterService,
-            StockDataService stockDataService
-    ) {
+    public ScrapeService(CompanyService companyService, HeadquarterService headquarterService, StockDataService stockDataService) {
         this.companyService = companyService;
         this.headquarterService = headquarterService;
         this.stockDataService = stockDataService;
@@ -64,10 +60,7 @@ public class ScrapeService {
 
     private static String extractYear(String description, int start, int length) {
         if (start != -1 && start + length + 4 <= description.length()) {
-            String yearSubstring = description.substring(
-                    start + length,
-                    start + length + 4
-            );
+            String yearSubstring = description.substring(start + length, start + length + 4);
             return yearSubstring.trim();
         }
         return EMPTY_STRING;
@@ -78,25 +71,16 @@ public class ScrapeService {
         int incorporatedIndex = findIndex(description, INCORPORATED_IN_KEYWORD);
 
         if (foundedIndex != -1) {
-            return extractYear(
-                    description,
-                    foundedIndex,
-                    FOUNDED_IN_KEYWORD.length()
-            );
+            return extractYear(description, foundedIndex, FOUNDED_IN_KEYWORD.length());
         } else if (incorporatedIndex != -1) {
-            return extractYear(
-                    description,
-                    incorporatedIndex,
-                    INCORPORATED_IN_KEYWORD.length()
-            );
+            return extractYear(description, incorporatedIndex, INCORPORATED_IN_KEYWORD.length());
         }
 
         return EMPTY_STRING;
     }
 
     @Transactional
-    public List<ScrapeDataResponse> scrapeData(String date, List<String> tickers)
-            throws StockDataException, TickerDoesNotExistException {
+    public List<ScrapeDataResponse> scrapeData(String date, List<String> tickers) throws StockDataException, TickerDoesNotExistException {
         List<ScrapeDataResponse> responses = new ArrayList<>();
         WebDriver driver = setupWebDriver();
         for (String ticker : tickers) {
@@ -122,32 +106,22 @@ public class ScrapeService {
         return new ChromeDriver(options);
     }
 
-    private void processTicker(WebDriver driver, String ticker, String date)
-            throws StockDataException, TickerDoesNotExistException {
+    private void processTicker(WebDriver driver, String ticker, String date) throws StockDataException, TickerDoesNotExistException {
         extractData(driver, ticker, date);
     }
 
-    private void extractData(WebDriver driver, String ticker, String date)
-            throws StockDataException {
+    private void extractData(WebDriver driver, String ticker, String date) throws StockDataException {
         navigateToProfile(driver, ticker);
-        String companyNameAndTicker = extractTextFromWebElement(
-                driver,
-                PROFILE_XPATH
-        );
+        String companyNameAndTicker = extractTextFromWebElement(driver, PROFILE_XPATH);
 
         if (companyNameAndTicker.isEmpty()) {
-            throw new TickerDoesNotExistException(
-                    "Company with ticker: " + ticker + " does not exist on Yahoo! Finance."
-            );
+            throw new TickerDoesNotExistException("Company with ticker: " + ticker + " does not exist on Yahoo! Finance.");
         }
         String companyName = getCompanyName(companyNameAndTicker);
         String companyTicker = getCompanyTicker(companyNameAndTicker);
         String description = extractTextFromWebElement(driver, DESCRIPTION_XPATH);
         String yearFounded = getYearFoundedFromString(description);
-        String fullTimeEmployees = extractTextFromWebElement(
-                driver,
-                FULL_TIME_EMPLOYEES_XPATH
-        );
+        String fullTimeEmployees = extractTextFromWebElement(driver, FULL_TIME_EMPLOYEES_XPATH);
 
         List<String> cityAndState = extractAddressFromWebElement(driver);
         String city = AddressUtils.getCity(cityAndState);
@@ -162,40 +136,20 @@ public class ScrapeService {
         String previousClosePrice = getPreviousClosePrice(table);
 
         if (openPrice.isEmpty() && previousClosePrice.isEmpty()) {
-            throw new StockDataException(
-                    "No historical data " + " on " + date + " for company: " + companyName
-            );
+            throw new StockDataException("No historical data " + " on " + date + " for company: " + companyName);
         }
         if (!openPrice.isEmpty() && previousClosePrice.isEmpty()) {
             previousClosePrice = getClosePrice(table);
         }
 
-        saveScrapedData(
-                companyName,
-                companyTicker,
-                yearFounded,
-                fullTimeEmployees,
-                city,
-                state,
-                marketCap,
-                openPrice,
-                previousClosePrice,
-                date
-        );
+        saveScrapedData(companyName, companyTicker, yearFounded, fullTimeEmployees, city, state, marketCap, openPrice, previousClosePrice, date);
     }
 
-    private String getPriceFromRow(
-            WebElement table,
-            int rowIndex,
-            int columnIndex
-    ) {
+    private String getPriceFromRow(WebElement table, int rowIndex, int columnIndex) {
         String price = EMPTY_STRING;
         try {
-            WebElement row = table.findElement(
-                    By.xpath("//tbody/tr[count(td) > 2][" + rowIndex + "]")
-            );
-            price =
-                    row.findElement(By.xpath(".//td[" + columnIndex + "]/span")).getText();
+            WebElement row = table.findElement(By.xpath("//tbody/tr[count(td) > 2][" + rowIndex + "]"));
+            price = row.findElement(By.xpath(".//td[" + columnIndex + "]/span")).getText();
             return price;
         } catch (NoSuchElementException e) {
             return price;
@@ -225,9 +179,7 @@ public class ScrapeService {
 
     private List<String> extractAddressFromWebElement(WebDriver driver) {
         try {
-            WebElement addressElement = driver
-                    .findElements(By.xpath(QSP_PROFILE_XPATH))
-                    .get(0);
+            WebElement addressElement = driver.findElements(By.xpath(QSP_PROFILE_XPATH)).get(0);
             String address = addressElement.getText();
             return AddressUtils.getCityAndState(address);
         } catch (IndexOutOfBoundsException e) {
@@ -240,9 +192,7 @@ public class ScrapeService {
     }
 
     private String getCompanyTicker(String companyText) {
-        return companyText.split("\\(").length > 1
-                ? companyText.split("\\(")[1].replace(")", "").trim()
-                : "";
+        return companyText.split("\\(").length > 1 ? companyText.split("\\(")[1].replace(")", "").trim() : "";
     }
 
     private void navigateToProfile(WebDriver driver, String ticker) {
@@ -255,67 +205,29 @@ public class ScrapeService {
         WebElement summary = driver.findElement(By.xpath(SUMMARY_XPATH));
         summary.click();
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(3));
-        wait.until(
-                ExpectedConditions.visibilityOfElementLocated(
-                        By.xpath("//div[@id='quote-summary']")
-                )
-        );
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//div[@id='quote-summary']")));
     }
 
-    private void navigateToHistoricalData(
-            WebDriver driver,
-            String ticker,
-            String date
-    ) {
+    private void navigateToHistoricalData(WebDriver driver, String ticker, String date) {
         String startDate = DateUtils.setDateToOneYearBefore(date);
-        String url =
-                BASE_URL +
-                        ticker +
-                        "/history?period1=" +
-                        DateUtils.dateStringToUnixTimestamp(startDate) +
-                        "&period2=" +
-                        DateUtils.dateStringToUnixTimestamp(date) +
-                        "&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true";
+        String url = BASE_URL + ticker + "/history?period1=" + DateUtils.dateStringToUnixTimestamp(startDate) + "&period2=" + DateUtils.dateStringToUnixTimestamp(date) + "&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true";
         driver.get(url);
     }
 
     private void checkIfDataAlreadySaved(String date, Company company) {
         Date targetDate = DateUtils.stringToDate(date);
-        Optional<StockData> stockData = stockDataService.getStockDataByCompanyIdAndTargetDate(
-                company.getId(),
-                targetDate
-        );
+        Optional<StockData> stockData = stockDataService.getStockDataByCompanyIdAndTargetDate(company.getId(), targetDate);
         if (stockData.isPresent()) {
-            throw new StockDataException(
-                    "Stock data for " +
-                            company.getTicker() +
-                            " on " +
-                            date +
-                            " already saved."
-            );
+            throw new StockDataException("Stock data for " + company.getTicker() + " on " + date + " already saved.");
         }
     }
 
-    private void saveScrapedData(
-            String companyName,
-            String companyTicker,
-            String yearFounded,
-            String fullTimeEmployees,
-            String city,
-            String state,
-            String marketCap,
-            String openPrice,
-            String previousClosePrice,
-            String date
-    ) {
+    private void saveScrapedData(String companyName, String companyTicker, String yearFounded, String fullTimeEmployees, String city, String state, String marketCap, String openPrice, String previousClosePrice, String date) {
         HeadquarterDTO headquarterDTO = new HeadquarterDTO();
         headquarterDTO.setCity(city);
         headquarterDTO.setState(state);
 
-        if (
-                !headquarterDTO.getCity().isEmpty() &&
-                        !headquarterDTO.getState().isEmpty()
-        ) {
+        if (!headquarterDTO.getCity().isEmpty() && !headquarterDTO.getState().isEmpty()) {
             headquarterService.saveHeadquarterIfNotExists(headquarterDTO);
         }
 
@@ -326,10 +238,7 @@ public class ScrapeService {
         companyDTO.setYearFounded(yearFounded);
         companyDTO.setMarketCap(marketCap);
 
-        Company company = companyService.saveOrUpdateCompany(
-                companyDTO,
-                headquarterDTO
-        );
+        Company company = companyService.saveOrUpdateCompany(companyDTO, headquarterDTO);
 
         StockDataDTO stockDataDTO = new StockDataDTO();
         stockDataDTO.setScrapingDate(new Date());
