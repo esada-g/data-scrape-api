@@ -30,22 +30,16 @@ import java.util.*;
 public class ScrapeService {
 
     private static final String CHROMEDRIVER_PATH = "/usr/bin/chromedriver";
-    private static final String CHROME_DRIVER_PROPERTY =
-            "webdriver.chrome.driver";
+    private static final String CHROME_DRIVER_PROPERTY = "webdriver.chrome.driver";
     private static final String CHROME_OPTIONS_HEADLESS = "--headless";
     private static final String CHROME_OPTIONS_DISABLE_GPU = "--disable-gpu";
     private static final String BASE_URL = "https://finance.yahoo.com/quote/";
     private static final String PROFILE_XPATH = "//h1[contains(@class, 'D(ib)')]";
-    private static final String DESCRIPTION_XPATH =
-            "//section[contains(@class, 'quote-sub-section')]/p";
-    private static final String FULL_TIME_EMPLOYEES_XPATH =
-            "//span[contains(text(), 'Full Time Employees')]/following-sibling::span[1]";
-    private static final String MARKET_CAP_XPATH =
-            "//td[@data-test='MARKET_CAP-value']";
-    private static final String HISTORY_TABLE_XPATH =
-            "//table[@data-test='historical-prices']";
-    private static final String QSP_PROFILE_XPATH =
-            "//div[@data-test='qsp-profile']/div/p";
+    private static final String DESCRIPTION_XPATH = "//section[contains(@class, 'quote-sub-section')]/p";
+    private static final String FULL_TIME_EMPLOYEES_XPATH = "//span[contains(text(), 'Full Time Employees')]/following-sibling::span[1]";
+    private static final String MARKET_CAP_XPATH = "//td[@data-test='MARKET_CAP-value']";
+    private static final String HISTORY_TABLE_XPATH = "//table[@data-test='historical-prices']";
+    private static final String QSP_PROFILE_XPATH = "//div[@data-test='qsp-profile']/div/p";
     private static final String SUMMARY_XPATH = "//li[@data-test='SUMMARY']/a";
     private static final String FOUNDED_IN_KEYWORD = "was founded in ";
     private static final String INCORPORATED_IN_KEYWORD = "was incorporated in ";
