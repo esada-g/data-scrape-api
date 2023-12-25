@@ -12,6 +12,7 @@ import com.datascrapeapi.stock.data.StockDataDTO;
 import com.datascrapeapi.stock.data.StockDataService;
 import com.datascrapeapi.utils.AddressUtils;
 import com.datascrapeapi.utils.DateUtils;
+import com.datascrapeapi.utils.ScrapeUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
@@ -28,22 +29,6 @@ import java.util.*;
 
 @Service
 public class ScrapeService {
-
-    private static final String CHROMEDRIVER_PATH = "/usr/bin/chromedriver";
-    private static final String CHROME_DRIVER_PROPERTY = "webdriver.chrome.driver";
-    private static final String CHROME_OPTIONS_HEADLESS = "--headless";
-    private static final String CHROME_OPTIONS_DISABLE_GPU = "--disable-gpu";
-    private static final String BASE_URL = "https://finance.yahoo.com/quote/";
-    private static final String PROFILE_XPATH = "//h1[contains(@class, 'D(ib)')]";
-    private static final String DESCRIPTION_XPATH = "//section[contains(@class, 'quote-sub-section')]/p";
-    private static final String FULL_TIME_EMPLOYEES_XPATH = "//span[contains(text(), 'Full Time Employees')]/following-sibling::span[1]";
-    private static final String MARKET_CAP_XPATH = "//td[@data-test='MARKET_CAP-value']";
-    private static final String HISTORY_TABLE_XPATH = "//table[@data-test='historical-prices']";
-    private static final String QSP_PROFILE_XPATH = "//div[@data-test='qsp-profile']/div/p";
-    private static final String SUMMARY_XPATH = "//li[@data-test='SUMMARY']/a";
-    private static final String FOUNDED_IN_KEYWORD = "was founded in ";
-    private static final String INCORPORATED_IN_KEYWORD = "was incorporated in ";
-    private static final String EMPTY_STRING = "";
     private final CompanyService companyService;
     private final HeadquarterService headquarterService;
     private final StockDataService stockDataService;
@@ -52,31 +37,6 @@ public class ScrapeService {
         this.companyService = companyService;
         this.headquarterService = headquarterService;
         this.stockDataService = stockDataService;
-    }
-
-    private static int findIndex(String description, String keyword) {
-        return description.indexOf(keyword);
-    }
-
-    private static String extractYear(String description, int start, int length) {
-        if (start != -1 && start + length + 4 <= description.length()) {
-            String yearSubstring = description.substring(start + length, start + length + 4);
-            return yearSubstring.trim();
-        }
-        return EMPTY_STRING;
-    }
-
-    private static String getYearFoundedFromString(String description) {
-        int foundedIndex = findIndex(description, FOUNDED_IN_KEYWORD);
-        int incorporatedIndex = findIndex(description, INCORPORATED_IN_KEYWORD);
-
-        if (foundedIndex != -1) {
-            return extractYear(description, foundedIndex, FOUNDED_IN_KEYWORD.length());
-        } else if (incorporatedIndex != -1) {
-            return extractYear(description, incorporatedIndex, INCORPORATED_IN_KEYWORD.length());
-        }
-
-        return EMPTY_STRING;
     }
 
     @Transactional
@@ -100,9 +60,9 @@ public class ScrapeService {
     }
 
     private WebDriver setupWebDriver() {
-        System.setProperty(CHROME_DRIVER_PROPERTY, CHROMEDRIVER_PATH);
+        System.setProperty(ScrapeConstants.CHROME_DRIVER_PROPERTY, ScrapeConstants.CHROMEDRIVER_PATH);
         ChromeOptions options = new ChromeOptions();
-        options.addArguments(CHROME_OPTIONS_HEADLESS, CHROME_OPTIONS_DISABLE_GPU);
+        options.addArguments(ScrapeConstants.CHROME_OPTIONS_HEADLESS, ScrapeConstants.CHROME_OPTIONS_DISABLE_GPU);
         return new ChromeDriver(options);
     }
 
@@ -112,26 +72,26 @@ public class ScrapeService {
 
     private void extractData(WebDriver driver, String ticker, String date) throws StockDataException {
         navigateToProfile(driver, ticker);
-        String companyNameAndTicker = extractTextFromWebElement(driver, PROFILE_XPATH);
+        String companyNameAndTicker = extractTextFromWebElement(driver, ScrapeConstants.PROFILE_XPATH);
 
         if (companyNameAndTicker.isEmpty()) {
             throw new TickerDoesNotExistException("Company with ticker: " + ticker + " does not exist on Yahoo! Finance.");
         }
         String companyName = getCompanyName(companyNameAndTicker);
         String companyTicker = getCompanyTicker(companyNameAndTicker);
-        String description = extractTextFromWebElement(driver, DESCRIPTION_XPATH);
-        String yearFounded = getYearFoundedFromString(description);
-        String fullTimeEmployees = extractTextFromWebElement(driver, FULL_TIME_EMPLOYEES_XPATH);
+        String description = extractTextFromWebElement(driver, ScrapeConstants.DESCRIPTION_XPATH);
+        String yearFounded = ScrapeUtils.getYearFoundedFromString(description);
+        String fullTimeEmployees = extractTextFromWebElement(driver, ScrapeConstants.FULL_TIME_EMPLOYEES_XPATH);
 
         List<String> cityAndState = extractAddressFromWebElement(driver);
         String city = AddressUtils.getCity(cityAndState);
         String state = AddressUtils.getState(cityAndState);
 
         navigateToSummary(driver);
-        String marketCap = extractTextFromWebElement(driver, MARKET_CAP_XPATH);
+        String marketCap = extractTextFromWebElement(driver, ScrapeConstants.MARKET_CAP_XPATH);
 
         navigateToHistoricalData(driver, ticker, date);
-        WebElement table = driver.findElement(By.xpath(HISTORY_TABLE_XPATH));
+        WebElement table = driver.findElement(By.xpath(ScrapeConstants.HISTORY_TABLE_XPATH));
         String openPrice = getOpenPrice(table);
         String previousClosePrice = getPreviousClosePrice(table);
 
@@ -146,7 +106,7 @@ public class ScrapeService {
     }
 
     private String getPriceFromRow(WebElement table, int rowIndex, int columnIndex) {
-        String price = EMPTY_STRING;
+        String price = ScrapeConstants.EMPTY_STRING;
         try {
             WebElement row = table.findElement(By.xpath("//tbody/tr[count(td) > 2][" + rowIndex + "]"));
             price = row.findElement(By.xpath(".//td[" + columnIndex + "]/span")).getText();
@@ -173,13 +133,13 @@ public class ScrapeService {
             WebElement element = driver.findElement(By.xpath(xpath));
             return element.getText();
         } catch (NoSuchElementException e) {
-            return EMPTY_STRING;
+            return ScrapeConstants.EMPTY_STRING;
         }
     }
 
     private List<String> extractAddressFromWebElement(WebDriver driver) {
         try {
-            WebElement addressElement = driver.findElements(By.xpath(QSP_PROFILE_XPATH)).get(0);
+            WebElement addressElement = driver.findElements(By.xpath(ScrapeConstants.QSP_PROFILE_XPATH)).get(0);
             String address = addressElement.getText();
             return AddressUtils.getCityAndState(address);
         } catch (IndexOutOfBoundsException e) {
@@ -196,13 +156,13 @@ public class ScrapeService {
     }
 
     private void navigateToProfile(WebDriver driver, String ticker) {
-        String url = BASE_URL + ticker + "/profile";
+        String url = ScrapeConstants.BASE_URL + ticker + "/profile";
         driver.get(url);
         System.out.println(url);
     }
 
     private void navigateToSummary(WebDriver driver) {
-        WebElement summary = driver.findElement(By.xpath(SUMMARY_XPATH));
+        WebElement summary = driver.findElement(By.xpath(ScrapeConstants.SUMMARY_XPATH));
         summary.click();
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(3));
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//div[@id='quote-summary']")));
@@ -210,7 +170,7 @@ public class ScrapeService {
 
     private void navigateToHistoricalData(WebDriver driver, String ticker, String date) {
         String startDate = DateUtils.setDateToOneYearBefore(date);
-        String url = BASE_URL + ticker + "/history?period1=" + DateUtils.dateStringToUnixTimestamp(startDate) + "&period2=" + DateUtils.dateStringToUnixTimestamp(date) + "&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true";
+        String url = ScrapeConstants.BASE_URL + ticker + "/history?period1=" + DateUtils.dateStringToUnixTimestamp(startDate) + "&period2=" + DateUtils.dateStringToUnixTimestamp(date) + "&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true";
         driver.get(url);
     }
 
@@ -250,4 +210,5 @@ public class ScrapeService {
 
         stockDataService.saveStockData(stockDataDTO, company);
     }
+
 }
